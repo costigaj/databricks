@@ -1,0 +1,20 @@
+# Upserts transformed bronze dataframe (df) to a silver table
+from delta.tables import DeltaTable
+
+if spark.catalog.tableExists("databricksac.silver.customers_enriched"):
+    print("--- Table exists: Executing Delta MERGE (Upsert) ---")
+    
+    dlt_object = DeltaTable.forName(spark, "databricksac.silver.customers_enriched")
+
+    dlt_object.alias("t") \
+        .merge(df.alias("s"), "t.customer_id = s.customer_id") \
+        .whenMatchedUpdateAll() \
+        .whenNotMatchedInsertAll() \
+        .execute()
+
+else:
+    print("--- Table does not exist: Executing initial table creation (Append) ---")
+    
+    df.write.format("delta") \
+        .mode("append") \
+        .saveAsTable("databricksac.silver.customers_enriched")
